@@ -9,11 +9,19 @@ async function detectMode() {
   try {
     const res = await fetch('/api/health', { cache: 'no-store' });
     const data = await res.json();
-    checkoutMode = data.mode === 'razorpay-test' ? 'razorpay' : 'demo';
+    const isTest = data.mode === 'razorpay-test';
+    const isLive = data.mode === 'razorpay';
+    checkoutMode = (isTest || isLive) ? 'razorpay' : 'demo';
     const banner = $('.demo-banner');
-    if (banner) banner.textContent = checkoutMode === 'razorpay'
-      ? 'TEST MODE · Razorpay test integration · No real money will be charged'
-      : 'DEMO MODE · No real payments. All activity is simulated.';
+    if (banner) {
+      if (isTest) {
+        banner.textContent = 'TEST MODE · Razorpay test integration · No real money will be charged';
+      } else if (isLive) {
+        banner.textContent = 'LIVE · Real contributions enabled via Razorpay';
+      } else {
+        banner.textContent = 'DEMO MODE · No real payments. All activity is simulated.';
+      }
+    }
   } catch (e) {
     checkoutMode = 'demo';
   }

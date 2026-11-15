@@ -170,7 +170,10 @@ async function handler(req, res) {
 
     // ── Health ──────────────────────────────────────────────
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return json(res, 200, { ok: true, mode: razorpayClient ? 'razorpay' : 'demo-only' });
+      const mode = razorpayClient
+        ? (process.env.RAZORPAY_KEY_ID?.startsWith('rzp_test_') ? 'razorpay-test' : 'razorpay')
+        : 'demo-only';
+      return json(res, 200, { ok: true, mode });
     }
 
     // ── Summary (public) ────────────────────────────────────
