@@ -258,51 +258,62 @@ async function handler(req, res) {
       }
 
       try {
-        if (eventType === 'payment.captured' || eventType === 'payment.failed') {
+        if (eventType === 'payment.captured' || eventType === 'payment_link.paid') {
           const paymentEntity = payload.payment?.entity;
-          if (!paymentEntity) return json(res, 400, { error: 'Missing payment entity' });
+          const plinkEntity = payload.payment_link?.entity;
+          const paymentId = paymentEntity?.id;
+          const plinkId = plinkEntity?.id || (paymentEntity?.description?.startsWith('#') ? 'plink_' + paymentEntity.description.slice(1) : null);
+          const amount = paymentEntity?.amount || plinkEntity?.amount_paid || plinkEntity?.amount;
+          const currency = paymentEntity?.currency || plinkEntity?.currency || 'INR';
 
-          const paymentId = paymentEntity.id;
-          const amount = paymentEntity.amount;
-          const currency = paymentEntity.currency;
-          const status = paymentEntity.status;
-
-          let record = findRecordByRazorpayPaymentId(paymentId);
-
-          if (!record && paymentEntity.notes && paymentEntity.notes.reference_id) {
-            record = records.find(r => r.attemptId === paymentEntity.notes.reference_id.replace('attempt_', ''));
+          let record = null;
+          if (paymentId) record = records.find(r => r.razorpayPaymentId === paymentId);
+          if (!record && plinkId) record = records.find(r => r.razorpayPaymentLinkId === plinkId);
+          if (!record && plinkEntity?.reference_id) {
+            record = records.find(r => r.attemptId === plinkEntity.reference_id || r.attemptId.replace(/-/g, '') === plinkEntity.reference_id);
+          }
+          if (!record && paymentEntity?.notes?.reference_id) {
+            const ref = paymentEntity.notes.reference_id.replace('attempt_', '');
+            record = records.find(r => r.attemptId === ref || r.attemptId.replace(/-/g, '') === ref);
           }
 
           if (!record) {
-            console.warn('Webhook received for unknown payment:', paymentId);
+            console.warn('Webhook received for unknown payment/link:', { eventType, paymentId, plinkId });
             return json(res, 404, { error: 'Payment record not found' });
           }
 
-          if (record.razorpayPaymentId === paymentId && record.webhookEventId) {
-            return json(res, 200, { ok: true, duplicate: true });
+          if (currency !== 'INR') {
+            console.warn('Non-INR payment captured:', currency);
+            return json(res, 400, { error: 'Unsupported currency' });
           }
 
-          if (eventType === 'payment.captured' && status === 'captured') {
-            if (currency !== 'INR') {
-              console.warn('Non-INR payment captured:', currency);
-              return json(res, 400, { error: 'Unsupported currency' });
+          record.razorpayPaymentId = paymentId || record.razorpayPaymentId;
+          if (plinkId) record.razorpayPaymentLinkId = plinkId;
+          record.webhookEventId = eventId;
+          record.status = 'verified';
+          record.verifiedAt = record.verifiedAt || new Date().toISOString();
+          record.razorpayAmount = amount || record.amount;
+          record.razorpayCurrency = currency;
+          save();
+          console.log(`Payment verified: ${record.razorpayPaymentId || record.razorpayPaymentLinkId} ₹${record.amount / 100}`);
+        } else if (eventType === 'payment.failed') {
+          const paymentEntity = payload.payment?.entity;
+          if (paymentEntity) {
+            const paymentId = paymentEntity.id;
+            const plinkId = paymentEntity.description?.startsWith('#') ? 'plink_' + paymentEntity.description.slice(1) : null;
+            let record = records.find(r => r.razorpayPaymentId === paymentId);
+            if (!record && plinkId) record = records.find(r => r.razorpayPaymentLinkId === plinkId);
+            if (!record && paymentEntity.notes?.reference_id) {
+              const ref = paymentEntity.notes.reference_id.replace('attempt_', '');
+              record = records.find(r => r.attemptId === ref || r.attemptId.replace(/-/g, '') === ref);
             }
-            record.razorpayPaymentId = paymentId;
-            record.webhookEventId = eventId;
-            record.status = 'verified';
-            record.verifiedAt = new Date().toISOString();
-            record.razorpayAmount = amount;
-            record.razorpayCurrency = currency;
-            save();
-            console.log(`Payment verified: ${paymentId} ₹${amount / 100}`);
-          } else if (eventType === 'payment.failed') {
-            record.razorpayPaymentId = paymentId;
-            record.webhookEventId = eventId;
-            record.status = 'failed';
-            record.razorpayAmount = amount;
-            record.razorpayCurrency = currency;
-            save();
-            console.log(`Payment failed: ${paymentId}`);
+            if (record) {
+              record.razorpayPaymentId = paymentId;
+              record.webhookEventId = eventId;
+              record.status = 'failed';
+              save();
+              console.log(`Payment failed: ${paymentId}`);
+            }
           }
         }
 

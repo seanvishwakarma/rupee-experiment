@@ -38,7 +38,7 @@ function createClient({keyId, keySecret, fetchImpl = globalThis.fetch}) {
     return result;
   }
   return {
-    async createPaymentLink({amountPaise, referenceId, description = 'Voluntary contribution to the ₹1 Experiment'}) {
+    async createPaymentLink({amountPaise, referenceId, description = 'Voluntary contribution to the ₹1 Experiment', notes = {}}) {
       if (!Number.isSafeInteger(amountPaise) || amountPaise < 100) throw new Error('Amount must be an integer of at least 100 paise');
       if (typeof referenceId !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(referenceId)) throw new Error('Invalid reference ID');
       if (typeof description !== 'string' || description.length < 1 || description.length > 255) throw new Error('Invalid description');
@@ -50,6 +50,7 @@ function createClient({keyId, keySecret, fetchImpl = globalThis.fetch}) {
         accept_partial:false,
         reference_id:referenceId,
         description,
+        notes: { reference_id: referenceId, ...notes },
         notify:{sms:false,email:false},
         reminder_enable:false,
         options:{checkout:{name:'₹1 Experiment'}}
