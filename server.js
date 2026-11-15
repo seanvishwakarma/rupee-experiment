@@ -239,21 +239,22 @@ async function handler(req, res) {
 
       const signature = req.headers['x-razorpay-signature'];
       const raw = await rawBody(req);
+      const incomingEventId = req.headers['x-razorpay-event-id'] || crypto.randomUUID();
 
       let event;
       try {
-        event = parseWebhook(raw, signature, process.env.RAZORPAY_WEBHOOK_SECRET, crypto.randomUUID());
+        event = parseWebhook(raw, signature, process.env.RAZORPAY_WEBHOOK_SECRET, incomingEventId);
       } catch (err) {
         console.warn('Invalid webhook:', err.message);
         return json(res, 400, { error: 'Invalid webhook signature' });
       }
 
-      const eventId = event.event.id;
+      const eventId = event.eventId || incomingEventId;
       const eventType = event.event.event;
       const payload = event.event.payload;
 
       // Idempotency: skip already-processed events
-      if (records.some(r => r.webhookEventId === eventId)) {
+      if (eventId && records.some(r => r.webhookEventId && r.webhookEventId === eventId)) {
         return json(res, 200, { ok: true, duplicate: true });
       }
 
@@ -270,7 +271,8 @@ async function handler(req, res) {
           if (paymentId) record = records.find(r => r.razorpayPaymentId === paymentId);
           if (!record && plinkId) record = records.find(r => r.razorpayPaymentLinkId === plinkId);
           if (!record && plinkEntity?.reference_id) {
-            record = records.find(r => r.attemptId === plinkEntity.reference_id || r.attemptId.replace(/-/g, '') === plinkEntity.reference_id);
+            const ref = plinkEntity.reference_id.replace('attempt_', '');
+            record = records.find(r => r.attemptId === ref || r.attemptId.replace(/-/g, '') === ref);
           }
           if (!record && paymentEntity?.notes?.reference_id) {
             const ref = paymentEntity.notes.reference_id.replace('attempt_', '');
