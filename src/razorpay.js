@@ -44,7 +44,16 @@ function createClient({keyId, keySecret, fetchImpl = globalThis.fetch}) {
       if (typeof description !== 'string' || description.length < 1 || description.length > 255) throw new Error('Invalid description');
       // A unique reference must be saved before making this request. A timeout is
       // ambiguous: reconcile with Razorpay rather than blindly creating again.
-      return request('POST','/payment_links',{amount:amountPaise,currency:'INR',accept_partial:false,reference_id:referenceId,description,notify:{sms:false,email:false},reminder_enable:false});
+      return request('POST','/payment_links',{
+        amount:amountPaise,
+        currency:'INR',
+        accept_partial:false,
+        reference_id:referenceId,
+        description,
+        notify:{sms:false,email:false},
+        reminder_enable:false,
+        options:{checkout:{name:'₹1 Experiment'}}
+      });
     },
     async fetchPayment(paymentId) {
       if (typeof paymentId !== 'string' || !/^pay_[A-Za-z0-9]+$/.test(paymentId)) throw new Error('Invalid Razorpay payment ID');
