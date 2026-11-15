@@ -3,11 +3,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy dependency files first (for layer caching)
-COPY package.json ./
+# Copy package descriptors
+COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# Install dependencies if present
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev && npm cache clean --force; fi
 
 # Copy application source
 COPY server.js ./server.js
@@ -15,8 +15,8 @@ COPY src ./src
 COPY public ./public
 COPY .env.example ./.env.example
 
-# Create data directory
-RUN mkdir -p data
+# Create data directory and ensure node user owns it
+RUN mkdir -p data && chown -R node:node /app
 
 # Run as non-root user
 USER node
