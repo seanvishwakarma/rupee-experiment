@@ -1,0 +1,15 @@
+'use strict';
+const {test,after}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');const http=require('node:http');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'rupee-demo-'));process.env.DEMO_DATA_FILE=path.join(dir,'data.json');process.env.DEMO_ADMIN_PASSWORD='test-pass';const {handler}=require('../server');const server=http.createServer(handler);
+after(()=>{server.close();fs.rmSync(dir,{recursive:true,force:true});});
+test('simulation, consent, auth, verification, deduplication and refund',async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${server.address().port}`;const call=(p,options={})=>fetch(base+p,options);const post=(p,v,cookie)=>call(p,{method:'POST',headers:{'Content-Type':'application/json',...(cookie?{cookie}:{})},body:JSON.stringify(v)});
+let res=await post('/api/demo/payments',{amount:100,name:'A',consent:false});assert.equal(res.status,400);
+res=await post('/api/demo/payments',{amount:100,name:'A',consent:true});assert.equal(res.status,201);let p=await res.json();assert.equal((await (await call('/api/summary')).json()).payments,0);
+assert.equal((await post(`/api/demo/payments/${p.id}/verify`,{})).status,401);
+assert.equal((await post('/api/demo/login',{password:'wrong'})).status,401);
+res=await post('/api/demo/login',{password:'test-pass'});assert.equal(res.status,200);const cookie=res.headers.get('set-cookie').split(';')[0];
+assert.equal((await post(`/api/demo/payments/${p.id}/verify`,{},cookie)).status,200);assert.equal((await post(`/api/demo/payments/${p.id}/verify`,{},cookie)).status,409);
+let summary=await (await call('/api/summary')).json();assert.equal(summary.total,100);assert.equal(summary.oneRupee,1);assert.equal(summary.leaderboard[0].name,'A');
+assert.equal((await post(`/api/demo/payments/${p.id}/refund`,{},cookie)).status,200);summary=await (await call('/api/summary')).json();assert.equal(summary.total,0);assert.equal(summary.supporters,0);
+assert.equal((await call('/')).status,200);assert.equal((await call('/admin')).status,200);
+});

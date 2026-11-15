@@ -1,0 +1,29 @@
+# Render deployment configuration for ₹1 Experiment
+# NOTE: Render free tier spins down after 15 min of inactivity (NOT 24x7).
+# For 24x7 free hosting, use Koyeb (koyeb.yaml) instead.
+#
+# Deploy: https://dashboard.render.com/create
+services:
+  - type: web
+    name: rupee-experiment
+    env: docker
+    plan: free
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATA_FILE
+        value: ./data/demo.json

@@ -1,0 +1,40 @@
+# Koyeb deployment configuration for ₹1 Experiment
+# Free tier: 1 Nano instance (shared CPU, 512MB RAM) — always on, no sleep
+# Deploy: https://app.koyeb.com/deployments/create
+#
+# After deploying, your app will be available at:
+#   https://your-app-name.koyeb.app
+#
+# Then add your custom domain in Koyeb dashboard and proxy through Cloudflare.
+
+name: rupee-experiment
+
+services:
+  - name: rupee-experiment
+    github:
+      repository: your-github-username/rupee-experiment  # Replace with your repo
+      branch: main
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - port: 3000
+        protocol: HTTP
+    env:
+      - name: NODE_ENV
+        value: production
+      - name: PORT
+        value: "3000"
+      - name: RAZORPAY_KEY_ID
+        value: rzp_test_your_test_key_id
+      - name: RAZORPAY_KEY_SECRET
+        value: your_test_secret
+      - name: RAZORPAY_WEBHOOK_SECRET
+        value: your_webhook_secret
+      - name: ADMIN_PASSWORD
+        value: change-me
+      - name: DATA_FILE
+        value: ./data/demo.json
+    # Koyeb free tier instance size
+    instance_size: nano
+    routes:
+      - path: /

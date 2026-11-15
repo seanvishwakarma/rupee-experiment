@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin dashboard — ₹1 Experiment</title><link rel="stylesheet" href="/style.css"><script defer src="/admin.js"></script></head><body>
+<div class="demo-banner" id="admin-banner">Admin dashboard</div>
+<header class="nav wrap"><a class="brand" href="/"><span class="brand-icon">₹</span><span>THE ₹1<br><b>EXPERIMENT</b></span></a><a class="text-link" href="/">← Back to experiment</a></header>
+<main class="admin wrap"><span class="mini-label orange">EXPERIMENT CONTROL ROOM</span><h1>Admin <em>dashboard.</em></h1><p>Review contributions. Approve verified payments, reject invalid claims, and mark refunds.</p>
+<form id="login" class="login-box"><label for="password">Admin password</label><div class="login-row"><input id="password" type="password" required placeholder="Enter admin password"><button class="button primary">Sign in ↗</button></div><p id="admin-pw-hint">Set ADMIN_PASSWORD environment variable to change it.</p></form>
+<div id="admin-error" role="alert" class="message"></div>
+<div id="dashboard" hidden>
+  <div class="admin-stats">
+    <div><small>PENDING</small><strong id="pending">0</strong></div>
+    <div><small>VERIFIED</small><strong id="verified">0</strong></div>
+    <div><small>TOTAL VERIFIED</small><strong id="admin-total">₹0</strong></div>
+  </div>
+  <div class="admin-heading"><h2>Activity <em>queue.</em></h2><button id="refresh" class="outline">Refresh ↻</button></div>
+  <div id="records" class="records"></div>
+</div></main></body></html>
